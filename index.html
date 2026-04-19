@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Family Budget</title>
+    <meta name="description" content="A family budget app with bill scanning">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Identity Services for Google Drive integration -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="glass-text">Family Budget</div>
+            <button class="nav-btn" data-target="view-settings" style="width:auto; padding:0; height:auto; color:var(--text-secondary);">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+            <div class="user-profile" id="user-profile">
+                <!-- User avatar or login button will go here -->
+                <button id="login-btn" class="glass-btn small-btn">Login</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="content-area">
+            
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view active-view">
+                <div class="balance-card glass-panel">
+                    <h2>Total Balance</h2>
+                    <div class="balance-amount" id="total-balance">€0.00</div>
+                    <div class="balance-stats">
+                        <div class="stat">
+                            <span class="stat-label">Income</span>
+                            <span class="stat-value positive" id="dashboard-income">+€0.00</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Expenses</span>
+                            <span class="stat-value negative" id="dashboard-expenses">-€0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accounts Section (Net Worth) -->
+                <div class="glass-panel" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <div style="display: flex; flex-direction: column;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Net Worth</h3>
+                            <span id="net-worth-display" style="font-size: 1.5rem; font-weight: 700;">€0.00</span>
+                        </div>
+                        <button id="toggle-account-form" class="text-btn">Manage</button>
+                    </div>
+
+                    <div id="account-edit-form" class="hidden" style="margin-bottom: 20px; padding: 16px; background: var(--bg-main); border-radius: 8px;">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>Account Name</label>
+                            <input type="text" id="new-acc-name" class="glass-input" placeholder="e.g. Chase Checking">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Type</label>
+                                <select id="new-acc-type" class="glass-input">
+                                    <option value="bank">Checking / Cash</option>
+                                    <option value="savings">Savings Account</option>
+                                    <option value="credit">Credit Card</option>
+                                    <option value="investment">Investment</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Balance (€)</label>
+                                <input type="number" id="new-acc-balance" inputmode="decimal" class="glass-input" placeholder="0.00">
+                            </div>
+                        </div>
+                        <button id="save-account-btn" class="glass-btn outline-btn w-full" style="background: var(--surface);">+ Add Account</button>
+                    </div>
+
+                    <div id="accounts-list">
+                        <!-- Accounts go here -->
+                    </div>
+                </div>
+
+                <!-- Goals Section -->
+                <div class="glass-panel" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3>Savings Goals</h3>
+                        <button id="toggle-goal-form" class="text-btn">Manage</button>
+                    </div>
+
+                    <div id="goal-edit-form" class="hidden" style="margin-bottom: 20px; padding: 16px; background: var(--bg-main); border-radius: 8px;">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>Goal Name</label>
+                            <input type="text" id="new-goal-name" class="glass-input" placeholder="e.g. Summer Vacation">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Current Saved (€)</label>
+                                <input type="number" id="new-goal-current" inputmode="decimal" class="glass-input" placeholder="0.00">
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Target Amount (€)</label>
+                                <input type="number" id="new-goal-target" inputmode="decimal" class="glass-input" placeholder="1000.00">
+                            </div>
+                        </div>
+                        <button id="save-goal-btn" class="glass-btn outline-btn w-full" style="background: var(--surface);">+ Add Goal</button>
+                    </div>
+
+                    <div class="expense-list" id="goals-list">
+                        <!-- Goal progress bars go here -->
+                    </div>
+                </div>
+
+                <div class="recent-transactions">
+                    <div class="section-header">
+                        <h3>Recent Expenses</h3>
+                        <button class="text-btn">View All</button>
+                    </div>
+                    <div class="expense-list" id="recent-expenses-list">
+                        <!-- Expenses will be populated here -->
+                    </div>
+
+                    <button id="show-manual-form-btn" class="glass-btn outline-btn w-full" style="margin-top: 20px;">+ Add Transaction Manually</button>
+                    
+                    <div id="manual-form" class="glass-panel hidden" style="margin-top: 16px;">
+                        <h3>Manual Entry</h3>
+                        
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label>Type</label>
+                            <select id="manual-type" class="glass-input">
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" id="manual-amount" inputmode="decimal" class="glass-input" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <input type="text" id="manual-category" class="glass-input" placeholder="e.g. Salary, Groceries">
+                        </div>
+                        <div class="form-group">
+                            <label>Note / Source</label>
+                            <input type="text" id="manual-note" class="glass-input" placeholder="e.g. TechCorp, Walmart">
+                        </div>
+                        
+                        <div class="form-group hidden" id="recurring-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="manual-recurring" style="width: 20px; height: 20px;">
+                            <label for="manual-recurring" style="margin: 0; color: white;">Repeat automatically every month</label>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button id="cancel-manual-btn" class="glass-btn w-full">Cancel</button>
+                            <button id="save-manual-btn" class="glass-btn primary-btn w-full">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scan View -->
+            <section id="view-scan" class="view">
+                <div class="camera-container glass-panel">
+                    <video id="camera-stream" autoplay playsinline></video>
+                    <canvas id="camera-canvas" style="display:none;"></canvas>
+                    <img id="scanned-image" style="display:none;" />
+                    <div class="camera-overlay">
+                        <div class="scan-frame"></div>
+                    </div>
+                </div>
+                <div class="camera-controls">
+                    <button id="capture-btn" class="capture-btn">
+                        <div class="capture-inner"></div>
+                    </button>
+                </div>
+                <div id="scan-results" class="scan-results glass-panel hidden">
+                    <div class="loading-scanner hidden" id="scanner-loading">
+                        <div class="spinner"></div>
+                        <p>Analyzing bill with Gemini...</p>
+                    </div>
+                    <div id="scanner-form" class="hidden">
+                        <h3>Scanned Details</h3>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" id="scan-amount" inputmode="decimal" class="glass-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <input type="text" id="scan-category" class="glass-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Note</label>
+                            <input type="text" id="scan-note" class="glass-input">
+                        </div>
+                        <button id="save-scan-btn" class="glass-btn primary-btn w-full">Save Expense</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Transactions View -->
+            <section id="view-transactions" class="view">
+                <div class="glass-panel">
+                    <div class="section-header">
+                        <h2>Transactions</h2>
+                    </div>
+                    <div class="expense-list" id="all-transactions-list">
+                        <!-- Full list goes here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Budget View -->
+            <section id="view-budget" class="view">
+                <div class="glass-panel">
+                    <div class="section-header">
+                        <h2>Monthly Budget</h2>
+                        <button id="toggle-edit-budget-btn" class="text-btn">Edit Mode</button>
+                    </div>
+
+                    <div id="budget-edit-form" class="hidden" style="margin-bottom: 24px; padding: 16px; background: var(--bg-main); border-radius: 8px;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px;">Add or change category limit</h3>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>Category Name</label>
+                            <input type="text" id="new-budget-cat" class="glass-input" placeholder="e.g. Dining Out">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label>Monthly Limit (€)</label>
+                            <input type="number" id="new-budget-limit" inputmode="decimal" class="glass-input" placeholder="0.00">
+                        </div>
+                        <button id="save-budget-cat-btn" class="glass-btn outline-btn w-full" style="background: var(--surface);">+ Save Budget Category</button>
+                    </div>
+
+                    <div class="expense-list" id="budget-list">
+                        <!-- Budget progress bars go here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports View -->
+            <section id="view-reports" class="view">
+                <div class="glass-panel">
+                    <div class="section-header">
+                        <h2>Spending by Category</h2>
+                    </div>
+                    <div style="position: relative; height:300px; width:100%; margin-top:20px;">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass-panel" style="margin-top:24px;">
+                    <div class="section-header">
+                        <h2>Monthly Cash Flow</h2>
+                    </div>
+                    <div style="position: relative; height:250px; width:100%; margin-top:20px;">
+                        <canvas id="cashflowChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="view-settings" class="view">
+                <div class="settings-card glass-panel">
+                    <h2>Settings</h2>
+                    
+                    <div class="setting-group">
+                        <h3>AI Settings</h3>
+                        <div class="form-group">
+                            <label>Gemini API Key</label>
+                            <input type="password" id="gemini-key" class="glass-input" placeholder="AI Studio Key">
+                            <p class="setting-hint">Required for OCR bill scanning.</p>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <h3>Sync</h3>
+                        <div class="form-group">
+                            <button id="sync-drive-btn" class="glass-btn outline-btn w-full">Sync to Google Drive</button>
+                            <p class="setting-hint" id="sync-status">Local storage only.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav glass-nav">
+            <button class="nav-btn active" data-target="view-dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Overview</span>
+            </button>
+            <button class="nav-btn" data-target="view-transactions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                <span>Ledger</span>
+            </button>
+            <button class="nav-btn scan-nav-btn" data-target="view-scan">
+                <div class="scan-fab">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+            </button>
+            <button class="nav-btn" data-target="view-budget">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Budget</span>
+            </button>
+            <button class="nav-btn" data-target="view-reports">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                <span>Reports</span>
+            </button>
+        </nav>
+    </div>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
