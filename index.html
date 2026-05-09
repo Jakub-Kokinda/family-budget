@@ -11,12 +11,35 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Google Identity Services for Google Drive integration -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <div id="app">
+    <!-- Login Screen -->
+    <div id="auth-screen" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:32px; gap:16px; background:var(--bg-main);">
+        <h1 style="font-size:1.8rem; font-weight:700; margin-bottom:8px;">Family Budget</h1>
+        <p style="color:var(--text-secondary); margin-bottom:16px;">Sign in to access your shared budget</p>
+        <input id="auth-email" type="email" class="glass-input" placeholder="Email" style="width:100%; max-width:360px;">
+        <input id="auth-password" type="password" class="glass-input" placeholder="Password" style="width:100%; max-width:360px;">
+        <button id="btn-login" class="glass-btn primary-btn" style="width:100%; max-width:360px;">Log In</button>
+        <button id="btn-signup" class="glass-btn outline-btn" style="width:100%; max-width:360px;">Create Account</button>
+        <p id="auth-error" style="color:var(--danger); font-size:0.85rem; text-align:center;"></p>
+    </div>
+
+    <!-- Family Setup Screen -->
+    <div id="family-screen" style="display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:32px; gap:16px; background:var(--bg-main);">
+        <h2 style="font-size:1.5rem; font-weight:700; margin-bottom:8px;">Set Up Family Sharing</h2>
+        <p style="color:var(--text-secondary); text-align:center; margin-bottom:16px;">Create a new family or join your partner's existing family.</p>
+        <button id="btn-create-family" class="glass-btn primary-btn" style="width:100%; max-width:360px;">Create New Family</button>
+        <p style="color:var(--text-secondary);">— or join an existing one —</p>
+        <input id="family-code-input" class="glass-input" placeholder="Enter family code (e.g. AB12CD)" style="width:100%; max-width:360px; text-transform:uppercase; letter-spacing:2px;">
+        <button id="btn-join-family" class="glass-btn outline-btn" style="width:100%; max-width:360px;">Join Family</button>
+    </div>
+
+    <div id="app" style="display:none;">
         <!-- Header -->
         <header class="app-header">
             <div class="glass-text">Family Budget</div>
@@ -70,7 +93,6 @@
                                 <select id="new-acc-type" class="glass-input">
                                     <option value="bank">Checking / Cash</option>
                                     <option value="savings">Savings Account</option>
-                                    <option value="credit">Credit Card</option>
                                     <option value="investment">Investment</option>
                                 </select>
                             </div>
@@ -145,7 +167,7 @@
                         </div>
                         <div class="form-group">
                             <label>Category</label>
-                            <input type="text" id="manual-category" class="glass-input" placeholder="e.g. Salary, Groceries">
+                            <select id="manual-category" class="glass-input"></select>
                         </div>
                         <div class="form-group">
                             <label>Note / Source</label>
