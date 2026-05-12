@@ -495,9 +495,16 @@ function createExpenseElement(exp) {
             <div class="expense-meta">${exp.note} • ${dateStr}</div>
         </div>
         <div class="expense-amount ${colorClass}">${sign}€${exp.amount.toFixed(2)}</div>
+        <span style="cursor:pointer; color:var(--danger); font-size:1.1rem; margin-left:10px;" onclick="window.deleteExpense('${exp.id}')" title="Delete">✖</span>
     `;
     return el;
 }
+
+window.deleteExpense = async function(id) {
+    if (confirm('Delete this transaction?')) {
+        await familyRef.collection('expenses').doc(id).delete();
+    }
+};
 
 function renderDashboard() {
     let totalIncome  = 0;
