@@ -196,6 +196,7 @@ function subscribeToData() {
             dataInitialized = true;
             // On first load, check if we need to auto-create this month's recurring incomes
             processRecurringTransactions().then(() => {
+                checkMonthlyReset();
                 renderDashboard();
                 populateCategoryDropdown();
             });
@@ -846,6 +847,69 @@ function renderBudget() {
     });
 }
 
+// ─── Monthly Report & Reset ───────────────────────────────────────────────────
+function generateCSV(expenseList, label) {
+    const rows = [['Date', 'Type', 'Category', 'Note', 'Amount (€)']];
+    let totalIncome = 0, totalExpense = 0;
+
+    expenseList.forEach(exp => {
+        rows.push([
+            exp.date,
+            exp.type === 'income' ? 'Income' : 'Expense',
+            exp.category || 'Uncategorized',
+            (exp.note || '').replace(/,/g, ' '),
+            exp.type === 'income' ? exp.amount.toFixed(2) : (-exp.amount).toFixed(2)
+        ]);
+        if (exp.type === 'income') totalIncome += exp.amount;
+        else totalExpense += exp.amount;
+    });
+
+    rows.push([]);
+    rows.push(['', '', '', 'Total Income', totalIncome.toFixed(2)]);
+    rows.push(['', '', '', 'Total Expenses', (-totalExpense).toFixed(2)]);
+    rows.push(['', '', '', 'Net Balance', (totalIncome - totalExpense).toFixed(2)]);
+
+    return rows.map(r => r.join(',')).join('\n');
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function checkMonthlyReset() {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const famDoc = await familyRef.get();
+    const lastReset = famDoc.data()?.lastResetMonth;
+
+    if (lastReset && lastReset !== currentMonth) {
+        const prevDate = new Date(lastReset + '-01');
+        const label = prevDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+        if (expenses.length > 0) {
+            const csv = generateCSV(expenses, label);
+            downloadCSV(csv, `family-budget-${lastReset}.csv`);
+        }
+
+        const batch = firestore.batch();
+        expenses.forEach(exp => {
+            batch.delete(familyRef.collection('expenses').doc(exp.id));
+        });
+        await batch.commit();
+
+        alert(`New month started! ${label} report downloaded. Transactions cleared.`);
+    }
+
+    await familyRef.update({ lastResetMonth: currentMonth });
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 function initSettingsForm(familyId) {
     const keyInput = document.getElementById('gemini-key');
@@ -865,5 +929,15 @@ function initSettingsForm(familyId) {
             await auth.signOut();
             location.reload();
         }
+    };
+
+    // Manual report download
+    document.getElementById('download-report-btn').onclick = () => {
+        if (expenses.length === 0) return alert('No transactions to export.');
+        const now = new Date();
+        const label = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        const filename = `family-budget-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.csv`;
+        const csv = generateCSV(expenses, label);
+        downloadCSV(csv, filename);
     };
 }
